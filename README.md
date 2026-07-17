@@ -361,12 +361,3 @@ reflection of per-job latency (see the log output, where jobs complete in millis
   that time has elapsed.
 - ✅ **Job output logging** — every attempt's stdout/stderr is captured to
   `logs/<job_id>-attempt-<n>.log`.
-
-Not implemented (out of scope for this pass): metrics/execution-stats export and a web dashboard.
-
-## Demo
-
-<!-- Record a short CLI walkthrough (enqueue → worker start → retry/backoff → DLQ → dlq retry →
-     restart persistence), upload it, and put the link here before submitting. -->
-
-_Demo video: TODO — add link here._
