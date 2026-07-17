@@ -5,7 +5,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
@@ -18,8 +17,9 @@ public class Job {
     @Column(name = "id", length = 64)
     private String id;
 
-    @Lob
-    @Column(name = "command", nullable = false)
+    // length = 65535 (rather than the JPA default of 255) is what makes Hibernate's MySQL
+    // dialect pick TEXT here instead of TINYTEXT, matching the column type in V1__init.sql.
+    @Column(name = "command", nullable = false, length = 65535)
     private String command;
 
     @Enumerated(EnumType.STRING)
@@ -50,8 +50,7 @@ public class Job {
     @Column(name = "locked_at")
     private Instant lockedAt;
 
-    @Lob
-    @Column(name = "last_error")
+    @Column(name = "last_error", length = 65535)
     private String lastError;
 
     @Column(name = "started_at")
