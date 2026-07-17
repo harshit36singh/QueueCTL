@@ -15,7 +15,7 @@ to a dead letter queue (DLQ). Built with **Java 17, Spring Boot, and MySQL**.
 - 🎁 [Bonus features implemented](#bonus-features-implemented)
 - 🎬 [Demo](#demo)
 
-## Tech stack 🛠️
+## Tech stack
 
 | Concern            | Choice                                                        |
 |---------------------|----------------------------------------------------------------|
@@ -27,7 +27,7 @@ to a dead letter queue (DLQ). Built with **Java 17, Spring Boot, and MySQL**.
 | Build               | Maven                                                           |
 | Tests               | JUnit 5, Mockito, AssertJ                                       |
 
-## Setup instructions ⚙️
+## Setup instructions
 
 ### Prerequisites
 
@@ -93,7 +93,7 @@ java -jar target/queuectl.jar <command>
 Every invocation of `queuectl` is its own short-lived process — including `worker start`, which
 is the one command that blocks and runs in the foreground until you stop it (see below).
 
-## Usage examples 💻
+## Usage examples
 
 ```text
 $ queuectl enqueue '{"id":"job1","command":"echo Hello World"}'
@@ -196,7 +196,7 @@ directly, so it can never drift from what the CLI itself would report:
 This is the only command that starts an embedded web server — every other `queuectl` command runs
 with no HTTP server at all, so plain CLI usage isn't affected by the dashboard's presence.
 
-## Architecture overview 🏗️
+## Architecture overview
 
 ```
                          ┌────────────────────┐
@@ -319,7 +319,7 @@ above — so unresolvable commands degrade to a normal retry-then-DLQ, not a cra
 `job-timeout-seconds` bounds how long a single attempt can run before it's force-killed and
 counted as a failed attempt.
 
-## Assumptions & trade-offs ⚖️
+## Assumptions & trade-offs
 
 - **Threads-per-process, not one-OS-process-per-worker.** `worker start --count 3` runs 3 threads
   in one JVM rather than forking 3 OS processes. This is simpler to operate (one thing to start,
@@ -346,7 +346,7 @@ counted as a failed attempt.
   confirmation that the target process(es) actually stopped, rather than firing-and-forgetting the
   stop signal — this gives scripts/tests a reliable way to know shutdown actually completed.
 
-## Testing instructions 🧪
+## Testing instructions
 
 ### Unit tests
 
@@ -388,7 +388,7 @@ Narrated, paused walkthrough intended for recording a demo video: it opens the d
 worker in their own windows and steps through enqueue → pending → processing → retry/backoff →
 DLQ → `dlq retry` → config, pausing before each step so you can talk through what's on screen.
 
-## Bonus features implemented 🎁
+## Bonus features implemented
 
 - ✅ **Job timeout handling** — `job-timeout-seconds` config, enforced per attempt via
   `Process.waitFor(timeout, ...)` + `destroyForcibly()`.
@@ -400,6 +400,6 @@ DLQ → `dlq retry` → config, pausing before each step so you can talk through
   `logs/<job_id>-attempt-<n>.log`.
 - ✅ **Web dashboard** — `queuectl dashboard start`; see [Web dashboard](#web-dashboard) above.
 
-## Demo 🎬
+## Demo
 
 🎥 [Video walkthrough](https://drive.google.com/file/d/10b81tBa0pLqYH2_lgUgotHepePeIbuHb/view?usp=drive_link)
