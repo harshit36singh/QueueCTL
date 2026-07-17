@@ -9,6 +9,9 @@ import org.springframework.stereotype.Component;
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Parameters;
 
+import java.io.IOException;
+import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.concurrent.Callable;
@@ -17,8 +20,11 @@ import java.util.concurrent.Callable;
 @Command(name = "enqueue", description = "Add a new job to the queue")
 public class EnqueueCommand implements Callable<Integer> {
 
-    @Parameters(index = "0", paramLabel = "JSON",
-            description = "Job definition as JSON, e.g. '{\"id\":\"job1\",\"command\":\"sleep 2\"}'")
+    @Parameters(index = "0", arity = "0..1", paramLabel = "JSON",
+            description = "Job definition as JSON, e.g. '{\"id\":\"job1\",\"command\":\"sleep 2\"}'. "
+                    + "Omit (or pass '-') to read the JSON from stdin instead -- useful on shells "
+                    + "(e.g. Windows PowerShell) where quoting embedded double-quotes as a single "
+                    + "argument is unreliable.")
     private String json;
 
     private final JobService jobService;
@@ -31,9 +37,11 @@ public class EnqueueCommand implements Callable<Integer> {
 
     @Override
     public Integer call() {
+        String payload = (json == null || "-".equals(json)) ? readStdin() : json;
+
         EnqueueRequest request;
         try {
-            request = objectMapper.readValue(json, EnqueueRequest.class);
+            request = objectMapper.readValue(payload, EnqueueRequest.class);
         } catch (JsonProcessingException e) {
             System.err.println("Invalid JSON: " + e.getOriginalMessage());
             return 1;
@@ -68,6 +76,16 @@ public class EnqueueCommand implements Callable<Integer> {
             // Should be unreachable: we're serializing our own well-formed map.
             System.err.println("Error formatting output: " + e.getOriginalMessage());
             return 1;
+        }
+    }
+
+    private static String readStdin() {
+        try {
+            String text = new String(System.in.readAllBytes(), StandardCharsets.UTF_8);
+            // PowerShell's pipe writes a UTF-8 BOM (U+FEFF) ahead of piped string content on Windows.
+            return (!text.isEmpty() && text.charAt(0) == '﻿') ? text.substring(1) : text;
+        } catch (IOException e) {
+            throw new UncheckedIOException(e);
         }
     }
 }
