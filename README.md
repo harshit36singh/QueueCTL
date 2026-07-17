@@ -161,7 +161,7 @@ Every command supports `-h`/`--help`, e.g. `queuectl worker start --help`.
 
 | Command                                | Description                                             |
 |------------------------------------------|-----------------------------------------------------------|
-| `enqueue '<json>'`                      | Add a new job. `command` is required; everything else is optional (`id`, `max_retries`, `backoff_base`, `priority`, `run_at`). |
+| `enqueue '<json>'` / `... \| enqueue`   | Add a new job. `command` is required; everything else is optional (`id`, `max_retries`, `backoff_base`, `priority`, `run_at`). JSON can be passed as an argument, or piped via stdin (omit the argument, or pass `-`) — useful on shells like Windows PowerShell where a double-quoted JSON argument containing spaces isn't reliably passed through to a native process as a single argument. |
 | `worker start --count N`                | Start N worker threads in the foreground.                |
 | `worker stop [--id ID] [--wait-seconds S]` | Gracefully stop worker process(es).                    |
 | `status`                                | Job state counts + active worker processes.               |
@@ -375,6 +375,18 @@ restarts (every step is already a fresh JVM process reading shared MySQL state).
 each CLI invocation is a fresh Spring Boot process, the full script takes a few minutes to run —
 that startup cost is a smoke-test artifact of re-launching the JVM for every check, not a
 reflection of per-job latency (see the log output, where jobs complete in milliseconds).
+
+### Guided walkthrough (Windows PowerShell)
+
+```powershell
+$env:QUEUECTL_DB_USER = "queuectl"
+$env:QUEUECTL_DB_PASSWORD = "<your-password>"
+.\scripts\demo.ps1
+```
+
+Narrated, paused walkthrough intended for recording a demo video: it opens the dashboard and a
+worker in their own windows and steps through enqueue → pending → processing → retry/backoff →
+DLQ → `dlq retry` → config, pausing before each step so you can talk through what's on screen.
 
 ## Bonus features implemented
 
