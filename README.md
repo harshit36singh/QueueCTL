@@ -20,7 +20,7 @@ to a dead letter queue (DLQ). Built with **Java 17, Spring Boot, and MySQL**.
 | Concern            | Choice                                                        |
 |---------------------|----------------------------------------------------------------|
 | Language / runtime  | Java 17                                                         |
-| Framework           | Spring Boot 3.5 (non-web, `CommandLineRunner`)                  |
+| Framework           | Spring Boot 3.5 (`CommandLineRunner`; embedded Tomcat only for `dashboard start`) |
 | CLI parsing         | [picocli](https://picocli.info/) (Spring-managed commands)      |
 | Persistence         | MySQL 8+ via Spring Data JPA / Hibernate                        |
 | Schema migrations   | Flyway                                                          |
@@ -170,6 +170,31 @@ Every command supports `-h`/`--help`, e.g. `queuectl worker start --help`.
 | `dlq retry <job_id>`                    | Re-queue a dead job (resets attempts to 0).                |
 | `config set <key> <value>`              | Set a config value (see keys in the example above).        |
 | `config get [key]`                      | Show one or all config values.                              |
+| `dashboard start [--port N]`            | Start the web dashboard (default port 8080).                |
+
+### Web dashboard
+
+```bash
+$ queuectl dashboard start --port 8080
+Dashboard listening on http://localhost:8080
+Press Ctrl+C to stop.
+```
+
+Then open `http://localhost:8080` in a browser: job-state counts, active worker processes, and a
+filterable job table (with a one-click **Retry** button on dead-lettered jobs) auto-refreshing
+every 3 seconds. It's a single static HTML page with no build step and no external
+dependencies/CDNs, backed by a small read-only JSON API that reuses `JobService`/`WorkerService`
+directly, so it can never drift from what the CLI itself would report:
+
+| Endpoint                        | Description                                  |
+|----------------------------------|-----------------------------------------------|
+| `GET /api/status`               | Job state counts + active worker processes.    |
+| `GET /api/jobs?state=&limit=`   | List jobs, optionally filtered by state.        |
+| `GET /api/dlq?limit=`           | List dead-lettered jobs.                        |
+| `POST /api/dlq/{id}/retry`      | Re-queue a dead job.                            |
+
+This is the only command that starts an embedded web server — every other `queuectl` command runs
+with no HTTP server at all, so plain CLI usage isn't affected by the dashboard's presence.
 
 ## Architecture overview
 
@@ -361,3 +386,4 @@ reflection of per-job latency (see the log output, where jobs complete in millis
   that time has elapsed.
 - ✅ **Job output logging** — every attempt's stdout/stderr is captured to
   `logs/<job_id>-attempt-<n>.log`.
+- ✅ **Web dashboard** — `queuectl dashboard start`; see [Web dashboard](#web-dashboard) above.
