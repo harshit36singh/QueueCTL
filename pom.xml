@@ -36,6 +36,13 @@
             <scope>runtime</scope>
         </dependency>
 
+        <!-- Only pulled into the process tree for `queuectl dashboard start` (see QueueCtlApplication.main);
+             every other command still runs with WebApplicationType.NONE, no embedded server. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.flywaydb</groupId>
             <artifactId>flyway-core</artifactId>
@@ -76,13 +83,8 @@
                 <configuration>
                     <mainClass>com.queuectl.QueueCtlApplication</mainClass>
                 </configuration>
-                <executions>
-                    <execution>
-                        <goals>
-                            <goal>repackage</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <!-- spring-boot-starter-parent already binds the "repackage" goal to the
+                     package phase by default; no <executions> block needed here. -->
             </plugin>
         </plugins>
     </build>

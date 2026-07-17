@@ -18,6 +18,7 @@ import picocli.CommandLine.Spec;
                 ListCommand.class,
                 DlqCommand.class,
                 ConfigCommand.class,
+                DashboardCommand.class,
                 picocli.CommandLine.HelpCommand.class
         }
 )

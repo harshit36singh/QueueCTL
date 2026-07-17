@@ -1,6 +1,9 @@
 spring:
   main:
-    web-application-type: none
+    # Deliberately NOT set here: QueueCtlApplication.main() decides web-application-type
+    # per invocation (SERVLET only for `dashboard start`, NONE for every other command).
+    # spring.main.* properties from this file are bound onto SpringApplication *after* the
+    # builder's .web(...) call and would silently override it if set here.
     banner-mode: off
   datasource:
     url: jdbc:mysql://${QUEUECTL_DB_HOST:localhost}:${QUEUECTL_DB_PORT:3306}/${QUEUECTL_DB_NAME:queuectl}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectionCollation=utf8mb4_unicode_ci

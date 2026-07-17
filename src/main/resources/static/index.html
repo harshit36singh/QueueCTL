@@ -1,0 +1,380 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>queuectl dashboard</title>
+<style>
+  :root {
+    color-scheme: light;
+    --page:            #f9f9f7;
+    --surface-1:       #fcfcfb;
+    --text-primary:    #0b0b0b;
+    --text-secondary:  #52514e;
+    --text-muted:      #898781;
+    --gridline:        #e1e0d9;
+    --border:          rgba(11,11,11,0.10);
+    --series-blue:     #2a78d6;
+    --status-good:     #0ca30c;
+    --status-warning:  #fab219;
+    --status-serious:  #ec835a;
+    --status-critical: #d03b3b;
+    --status-neutral:  #898781;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      color-scheme: dark;
+      --page:            #0d0d0d;
+      --surface-1:       #1a1a19;
+      --text-primary:    #ffffff;
+      --text-secondary:  #c3c2b7;
+      --text-muted:      #898781;
+      --gridline:        #2c2c2a;
+      --border:          rgba(255,255,255,0.10);
+      --series-blue:     #3987e5;
+      --status-good:     #0ca30c;
+      --status-warning:  #fab219;
+      --status-serious:  #ec835a;
+      --status-critical: #d03b3b;
+      --status-neutral:  #898781;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--page);
+    color: var(--text-primary);
+    font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 28px;
+    border-bottom: 1px solid var(--border);
+  }
+  header h1 { font-size: 18px; font-weight: 600; margin: 0; }
+  header .meta { font-size: 13px; color: var(--text-muted); display: flex; align-items: center; gap: 10px; }
+  #dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    background: var(--status-good);
+    display: inline-block;
+    transition: background .2s ease;
+  }
+  #dot.stale { background: var(--status-critical); }
+
+  main { padding: 24px 28px 48px; max-width: 1160px; margin: 0 auto; }
+
+  .kpi-row {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 12px;
+    margin-bottom: 28px;
+  }
+  .tile {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+    border-left: 3px solid var(--accent, var(--gridline));
+  }
+  .tile .value {
+    font-size: 30px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.15;
+  }
+  .tile .label {
+    margin-top: 4px;
+    font-size: 12px;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: .04em;
+  }
+  .tile.pending    { --accent: var(--status-neutral); }
+  .tile.processing { --accent: var(--series-blue); }
+  .tile.completed  { --accent: var(--status-good); }
+  .tile.failed     { --accent: var(--status-warning); }
+  .tile.dead       { --accent: var(--status-critical); }
+
+  .panel {
+    background: var(--surface-1);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .panel-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  .panel-head h2 { font-size: 14px; font-weight: 600; margin: 0; }
+  .panel-head .count { font-size: 12px; color: var(--text-muted); }
+
+  select {
+    font: inherit;
+    font-size: 13px;
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: var(--surface-1);
+    color: var(--text-primary);
+  }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: left;
+    font-weight: 500;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: .04em;
+    padding: 8px 18px;
+    border-bottom: 1px solid var(--gridline);
+  }
+  tbody td {
+    padding: 9px 18px;
+    border-bottom: 1px solid var(--gridline);
+    color: var(--text-secondary);
+    vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  td.mono, .mono { font-variant-numeric: tabular-nums; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 12.5px; }
+  td.id-cell { color: var(--text-primary); font-weight: 500; }
+  td.cmd-cell {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .empty-row td { text-align: center; color: var(--text-muted); padding: 24px; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 3px 9px;
+    border-radius: 999px;
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: lowercase;
+    background: color-mix(in srgb, var(--badge-color) 16%, transparent);
+    color: var(--badge-color);
+  }
+  .badge::before {
+    content: "";
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--badge-color);
+  }
+  .badge.pending    { --badge-color: var(--status-neutral); }
+  .badge.processing { --badge-color: var(--series-blue); }
+  .badge.completed  { --badge-color: var(--status-good); }
+  .badge.failed     { --badge-color: var(--status-warning); }
+  .badge.dead       { --badge-color: var(--status-critical); }
+  .badge.running    { --badge-color: var(--status-good); }
+  .badge.stopping   { --badge-color: var(--status-warning); }
+  .badge.stopped    { --badge-color: var(--status-neutral); }
+
+  button.retry {
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 5px 11px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--series-blue);
+    cursor: pointer;
+  }
+  button.retry:hover { background: color-mix(in srgb, var(--series-blue) 12%, transparent); }
+  button.retry:disabled { opacity: .5; cursor: default; }
+
+  #error-banner {
+    display: none;
+    background: color-mix(in srgb, var(--status-critical) 14%, transparent);
+    color: var(--status-critical);
+    border: 1px solid var(--status-critical);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    margin-bottom: 20px;
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1>queuectl dashboard</h1>
+  <div class="meta">
+    <span id="dot" title="Connection status"></span>
+    <span id="updated">connecting…</span>
+  </div>
+</header>
+
+<main>
+  <div id="error-banner"></div>
+
+  <section class="kpi-row" id="kpi-row" aria-label="Job state counts">
+    <!-- populated by JS -->
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Active workers</h2>
+      <span class="count" id="worker-count">0</span>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>PID</th><th>Threads</th><th>Status</th><th>Last heartbeat</th></tr>
+      </thead>
+      <tbody id="workers-body"></tbody>
+    </table>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head">
+      <h2>Jobs</h2>
+      <select id="state-filter">
+        <option value="">All states</option>
+        <option value="pending">Pending</option>
+        <option value="processing">Processing</option>
+        <option value="completed">Completed</option>
+        <option value="failed">Failed</option>
+        <option value="dead">Dead (DLQ)</option>
+      </select>
+    </div>
+    <table>
+      <thead>
+        <tr><th>ID</th><th>State</th><th>Attempts</th><th>Command</th><th>Updated</th><th></th></tr>
+      </thead>
+      <tbody id="jobs-body"></tbody>
+    </table>
+  </section>
+</main>
+
+<script>
+  const STATES = ["pending", "processing", "completed", "failed", "dead"];
+  const stateFilter = document.getElementById("state-filter");
+  const errorBanner = document.getElementById("error-banner");
+  const dot = document.getElementById("dot");
+  const updatedEl = document.getElementById("updated");
+
+  function fmtTime(iso) {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return "—";
+    return d.toLocaleTimeString([], { hour12: false }) ;
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({
+      "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+    })[c]);
+  }
+
+  function renderKpis(states) {
+    const row = document.getElementById("kpi-row");
+    row.innerHTML = STATES.map(s => `
+      <div class="tile ${s}">
+        <div class="value">${states[s] ?? 0}</div>
+        <div class="label">${s}</div>
+      </div>
+    `).join("");
+  }
+
+  function renderWorkers(workers) {
+    document.getElementById("worker-count").textContent = workers.length;
+    const body = document.getElementById("workers-body");
+    if (workers.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="5">No active worker processes</td></tr>`;
+      return;
+    }
+    body.innerHTML = workers.map(w => `
+      <tr>
+        <td class="mono">${escapeHtml(w.id.slice(0, 8))}</td>
+        <td class="mono">${w.pid}</td>
+        <td class="mono">${w.threadCount}</td>
+        <td><span class="badge ${w.status}">${w.status}</span></td>
+        <td class="mono">${fmtTime(w.lastHeartbeat)}</td>
+      </tr>
+    `).join("");
+  }
+
+  function renderJobs(jobs) {
+    const body = document.getElementById("jobs-body");
+    if (jobs.length === 0) {
+      body.innerHTML = `<tr class="empty-row"><td colspan="6">No jobs in this state</td></tr>`;
+      return;
+    }
+    body.innerHTML = jobs.map(j => `
+      <tr>
+        <td class="id-cell mono">${escapeHtml(j.id)}</td>
+        <td><span class="badge ${j.state}">${j.state}</span></td>
+        <td class="mono">${j.attempts}/${j.maxRetries}</td>
+        <td class="cmd-cell" title="${escapeHtml(j.command)}">${escapeHtml(j.command)}</td>
+        <td class="mono">${fmtTime(j.updatedAt)}</td>
+        <td>${j.state === "dead"
+              ? `<button class="retry" data-id="${escapeHtml(j.id)}">Retry</button>`
+              : ""}</td>
+      </tr>
+    `).join("");
+
+    body.querySelectorAll("button.retry").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        btn.disabled = true;
+        btn.textContent = "…";
+        try {
+          const res = await fetch(`/api/dlq/${encodeURIComponent(btn.dataset.id)}/retry`, { method: "POST" });
+          if (!res.ok) throw new Error(await res.text());
+          await refresh();
+        } catch (e) {
+          showError("Retry failed: " + e.message);
+          btn.disabled = false;
+          btn.textContent = "Retry";
+        }
+      });
+    });
+  }
+
+  function showError(msg) {
+    errorBanner.textContent = msg;
+    errorBanner.style.display = "block";
+    dot.classList.add("stale");
+  }
+
+  function clearError() {
+    errorBanner.style.display = "none";
+    dot.classList.remove("stale");
+  }
+
+  async function refresh() {
+    try {
+      const [statusRes, jobsRes] = await Promise.all([
+        fetch("/api/status"),
+        fetch("/api/jobs?limit=100" + (stateFilter.value ? "&state=" + stateFilter.value : ""))
+      ]);
+      if (!statusRes.ok || !jobsRes.ok) throw new Error("API request failed");
+      const status = await statusRes.json();
+      const jobs = await jobsRes.json();
+
+      renderKpis(status.states);
+      renderWorkers(status.workers);
+      renderJobs(jobs);
+      updatedEl.textContent = "updated " + new Date().toLocaleTimeString([], { hour12: false });
+      clearError();
+    } catch (e) {
+      showError("Could not reach queuectl API: " + e.message);
+    }
+  }
+
+  stateFilter.addEventListener("change", refresh);
+  refresh();
+  setInterval(refresh, 3000);
+</script>
+</body>
+</html>
