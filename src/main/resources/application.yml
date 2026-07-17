@@ -1,0 +1,29 @@
+spring:
+  main:
+    web-application-type: none
+    banner-mode: off
+  datasource:
+    url: jdbc:mysql://${QUEUECTL_DB_HOST:localhost}:${QUEUECTL_DB_PORT:3306}/${QUEUECTL_DB_NAME:queuectl}?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&connectionCollation=utf8mb4_unicode_ci
+    username: ${QUEUECTL_DB_USER:root}
+    password: ${QUEUECTL_DB_PASSWORD:}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+logging:
+  level:
+    root: WARN
+    com.queuectl: ${QUEUECTL_LOG_LEVEL:INFO}
+  pattern:
+    console: "%d{HH:mm:ss.SSS} %-5level [%thread] %logger{36} - %msg%n"
